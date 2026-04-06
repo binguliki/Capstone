@@ -113,8 +113,8 @@ const DetectDiseasePage: React.FC = () => {
     if (!img || !canvas) return;
 
     const drawBoxes = () => {
-      canvas.width = img.naturalWidth || img.offsetWidth;
-      canvas.height = img.naturalHeight || img.offsetHeight;
+      canvas.width = img.naturalWidth || 800;
+      canvas.height = img.naturalHeight || 600;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -232,13 +232,13 @@ const DetectDiseasePage: React.FC = () => {
                 ref={imgRef}
                 src={image}
                 alt="Crop preview"
-                className="w-full h-64 object-cover block"
+                className="w-full h-auto max-h-[600px] object-contain block"
               />
               {/* Canvas overlay - draws bounding boxes on top */}
               <canvas
                 ref={canvasRef}
                 className="absolute inset-0 w-full h-full pointer-events-none"
-                style={{ objectFit: 'cover' }}
+                style={{ objectFit: 'contain' }}
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <Button onClick={resetAll} variant="secondary" className="gap-2">

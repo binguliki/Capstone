@@ -32,13 +32,13 @@ COPY --from=builder /root/.local /root/.local
 # Copy application code
 COPY main.py .
 COPY mobilevit_classes.py .
-COPY modelv1.keras .
+COPY modelv2.keras .
 
 # Environment setup
 ENV PATH=/root/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    MODEL_PATH=/app/modelv1.keras \
+    MODEL_PATH=/app/modelv2.keras \
     HOST=0.0.0.0 \
     PORT=8000
 

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 # ─── Constants & Configuration ────────────────────────────────────────────────
 
-MODEL_PATH = os.getenv('MODEL_PATH', 'modelv1.keras')
+MODEL_PATH = os.getenv('MODEL_PATH', 'modelv2.keras')
 IMG_SIZE = 256
 CHANNELS = 3
 
@@ -247,41 +247,31 @@ def run_inference(image_batch: np.ndarray) -> Dict[str, Any]:
     try:
         outputs = model(image_batch, training=False)
         
-        # Parse outputs based on model architecture
-        if isinstance(outputs, dict):
-            cls_logits = outputs.get('cls_logits')
-            seg_logits = outputs.get('seg_logits')
-            boxes = np.zeros((1, 100, 4))
-            box_labels = np.zeros((1, 100))
-            box_confs = np.zeros((1, 100))
-        elif isinstance(outputs, (list, tuple)):
-            # Multiple outputs: [cls_logits, boxes, box_labels, box_confs]
-            cls_logits = outputs[0]
-            boxes = outputs[1] if len(outputs) > 1 else np.zeros((1, 100, 4))
-            box_labels = outputs[2] if len(outputs) > 2 else np.zeros((1, 100))
-            box_confs = outputs[3] if len(outputs) > 3 else np.zeros((1, 100))
-        else:
-            # Single output: assume classification only
-            cls_logits = outputs
-            boxes = np.zeros((1, 100, 4))
-            box_labels = np.zeros((1, 100))
-            box_confs = np.zeros((1, 100))
-        return_dict = {
+        # New Model outputs: {'cls_logits', 'det_cls', 'det_box'}
+        cls_logits = outputs.get('cls_logits')
+        det_cls = outputs.get('det_cls')
+        det_box = outputs.get('det_box')
+        
+        # Post-process detection
+        det_cls_np = tf.nn.softmax(det_cls, axis=-1).numpy()[0]
+        det_box_np = det_box.numpy()[0]
+        
+        scores_all = det_cls_np.max(axis=-1)
+        labels_all = det_cls_np.argmax(axis=-1)
+        
+        return {
             'cls_logits': cls_logits[0].numpy() if hasattr(cls_logits, 'numpy') else cls_logits[0],
-            'boxes': boxes[0].numpy() if hasattr(boxes, 'numpy') else boxes[0],
-            'box_labels': box_labels[0].numpy() if hasattr(box_labels, 'numpy') else box_labels[0],
-            'box_confs': box_confs[0].numpy() if hasattr(box_confs, 'numpy') else box_confs[0],
+            'boxes': det_box_np,
+            'box_labels': labels_all,
+            'box_confs': scores_all
         }
-        if 'seg_logits' in locals() and seg_logits is not None:
-            return_dict['seg_logits'] = seg_logits[0].numpy() if hasattr(seg_logits, 'numpy') else seg_logits[0]
-        return return_dict
     except Exception as e:
         logger.error(f"Inference failed: {str(e)}")
         raise
 
 
 def postprocess_outputs(inference_outputs: Dict[str, Any], 
-                        conf_threshold: float = 0.3) -> Dict[str, Any]:
+                        conf_threshold: float = 0.05) -> Dict[str, Any]:
     """
     Postprocess model outputs to extract disease classification and bounding boxes.
     
@@ -308,11 +298,12 @@ def postprocess_outputs(inference_outputs: Dict[str, Any],
     for i in range(len(boxes)):
         conf = float(box_confs[i]) if box_confs[i] > 0 else 0
         
-        # Skip invalid boxes (sentinel -1 or low confidence)
-        if conf < conf_threshold or np.any(boxes[i] < 0):
+        # Skip invalid boxes (low confidence)
+        if conf < conf_threshold:
             continue
         
-        x1, y1, x2, y2 = boxes[i]
+        # Clip boxes to [0, 1] to handle raw network outputs
+        x1, y1, x2, y2 = np.clip(boxes[i], 0.0, 1.0)
         
         # Validate box coordinates
         if not (0 <= x1 < x2 <= 1 and 0 <= y1 < y2 <= 1):
@@ -327,16 +318,17 @@ def postprocess_outputs(inference_outputs: Dict[str, Any],
         label = IDX_TO_CLASS.get(label_idx, "healthy")
         
         valid_boxes.append({
-            'x1': float(np.clip(x1, 0, 1)),
-            'y1': float(np.clip(y1, 0, 1)),
-            'x2': float(np.clip(x2, 0, 1)),
-            'y2': float(np.clip(y2, 0, 1)),
+            'x1': float(x1),
+            'y1': float(y1),
+            'x2': float(x2),
+            'y2': float(y2),
             'label': label,
             'confidence': min(conf, 1.0),
         })
     
-    # Sort by confidence descending
+    # Sort by confidence descending and cap at top 10
     valid_boxes.sort(key=lambda x: x['confidence'], reverse=True)
+    valid_boxes = valid_boxes[:10]
     
     return {
         'classification': classification,
@@ -439,28 +431,8 @@ async def predict(file: UploadFile = File(..., description="Leaf image (JPEG/PNG
             for bbox in predictions['bounding_boxes']
         ]
 
-        # Derive bounding boxes from segmentation mask (normalized 0-1 coords)
-        seg_logits = inference_outputs.get('seg_logits')
-        if seg_logits is not None and predictions['classification'].lower() != 'healthy':
-            try:
-                import cv2
-                seg_mask = np.argmax(seg_logits, axis=-1).astype(np.uint8)
-                mh, mw = seg_mask.shape[:2]
-                _, binary_mask = cv2.threshold(seg_mask, 0, 255, cv2.THRESH_BINARY)
-                contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                for contour in contours:
-                    if cv2.contourArea(contour) > 50:
-                        x, y, bw, bh = cv2.boundingRect(contour)
-                        bounding_boxes.append(BoundingBox(
-                            x1=round(x / mw, 4),
-                            y1=round(y / mh, 4),
-                            x2=round((x + bw) / mw, 4),
-                            y2=round((y + bh) / mh, 4),
-                            label=predictions['classification'],
-                            confidence=predictions['confidence'],
-                        ))
-            except Exception as seg_err:
-                logger.warning(f"Segmentation bbox extraction failed: {seg_err}")
+        # We completely removed all legacy seg_logits bounding box logic. 
+        # All boxes are now naturally extracted from predict() as bounding_boxes
 
         return PredictionResponse(
             classification=predictions['classification'],
