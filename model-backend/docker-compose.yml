@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: leaf-disease-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=/app/modelv1.keras
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - ./modelv1.keras:/app/modelv1.keras:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.example.app=leaf-disease-api"
+      - "com.example.version=1.0.0"

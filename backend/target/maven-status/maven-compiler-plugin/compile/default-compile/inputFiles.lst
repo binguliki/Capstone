@@ -1,0 +1,17 @@
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/controller/ReportController.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/config/WebConfig.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/controller/HealthController.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/service/GeminiService.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/controller/ModelController.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/repository/UserRepository.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/service/ModelService.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/entity/DiseaseReport.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/entity/ModelCall.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/BackendApplication.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/repository/DiseaseReportRepository.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/controller/AuthController.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/service/DiseaseReportService.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/config/SecurityConfig.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/entity/User.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/repository/ModelCallRepository.java
+/Users/Bingumalla Likith/Documents/Capstone/FinalCodebase/backend/src/main/java/com/farmerapp/backend/service/UserService.java

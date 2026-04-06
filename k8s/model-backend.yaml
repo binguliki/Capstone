@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: model-backend
+  template:
+    metadata:
+      labels:
+        app: model-backend
+    spec:
+      containers:
+      - name: model-backend
+        image: model-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-backend
+spec:
+  selector:
+    app: model-backend
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: ClusterIP
